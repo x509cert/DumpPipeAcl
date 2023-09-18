@@ -21,7 +21,7 @@ void DisplayACL(const char* pipeName) {
     }
 
     // Convert the ACL to a string.
-    LPSTR stringSD;
+    LPSTR stringSD = nullptr;
     if (!ConvertSecurityDescriptorToStringSecurityDescriptorA(
         pSD,
         SDDL_REVISION_1,
@@ -35,8 +35,19 @@ void DisplayACL(const char* pipeName) {
         return;
     }
 
+    // break up the SDDL string so it's more readable
+    std::string str = stringSD;
+    std::string toReplace = ")(";  
+    std::string replaceWith = ")\n(";  
+
+    size_t pos = 0;
+    while ((pos = str.find(toReplace, pos)) != std::string::npos) {
+        str.replace(pos, toReplace.length(), replaceWith);
+        pos += replaceWith.length();  
+    }
+
     // Print the string representation of the ACL.
-    std::cout << "ACL for named pipe '" << pipeName << "': " << stringSD << std::endl;
+    std::cout << "ACL for named pipe " << pipeName << "\n" << str << std::endl;
 
     // Cleanup.
     LocalFree(stringSD);
@@ -44,8 +55,12 @@ void DisplayACL(const char* pipeName) {
     CloseHandle(hPipe);
 }
 
-int main() {
-    const char* pipeName = "\\\\.\\\\pipe\\\\W32TIME_ALT";  // Replace this with your named pipe's path.
-    DisplayACL(pipeName);
+int main(int argc, char **argv) {
+    if (argc != 2) {
+        std::cout << "Usage: DumpPipeAcl <pipename>" << std::endl;
+        return -1;
+    }
+
+    DisplayACL(argv[1]);
     return 0;
 }
